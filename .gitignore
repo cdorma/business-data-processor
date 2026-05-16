@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+*.pyo
+sample_business_data.csv
+processed_data.csv
+processed_data.report.txt
