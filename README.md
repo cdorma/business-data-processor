@@ -35,7 +35,7 @@
 
 ## 技术栈
 
-纯 HTML/CSS/Vanilla JavaScript，单文件约 1100 行，无框架、无构建工具、无 npm 依赖。
+纯 HTML/CSS/Vanilla JavaScript，单文件约 1200 行，无框架、无构建工具、无 npm 依赖。
 
 ---
 
@@ -58,6 +58,14 @@ python business_data_processor.py
 ```
 
 首次运行会自动生成模拟数据并处理，输出 `processed_data.csv` 和 `processed_data.report.txt`。
+
+## 处理真实数据
+
+```python
+from business_data_processor import run_pipeline
+
+run_pipeline("你的业务数据.csv", output_dir="./output")
+```
 
 ## 清洗规则
 
