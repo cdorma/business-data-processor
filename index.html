@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Time Tracker</title>
+<style>
+/* ===== RESET & VARIABLES ===== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f5f7;
+  --card:#ffffff;
+  --text:#1e293b;
+  --text-secondary:#64748b;
+  --text-muted:#94a3b8;
+  --border:#e2e8f0;
+  --primary:#2563eb;
+  --primary-hover:#1d4ed8;
+  --primary-light:#eff6ff;
+  --warning:#ef4444;
+  --warning-light:#fef2f2;
+  --warning-border:#fecaca;
+  --success:#16a34a;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.05);
+  --shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+  --shadow-md:0 4px 6px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.06);
+  --radius:8px;
+  --radius-lg:12px;
+  --transition:150ms ease;
+}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  line-height:1.5;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ===== LAYOUT ===== */
+#app{display:flex;min-height:100vh}
+.sidebar{
+  width:300px;min-width:300px;background:var(--card);
+  border-right:1px solid var(--border);
+  padding:24px 20px;
+  display:flex;flex-direction:column;gap:20px;
+  overflow-y:auto;
+  position:sticky;top:0;height:100vh;
+}
+.main{
+  flex:1;padding:24px 32px;overflow-y:auto;max-width:900px;
+}
+
+/* ===== HEADER ===== */
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}
+.header h1{font-size:20px;font-weight:700;letter-spacing:-0.3px;color:var(--text)}
+.header-actions{display:flex;gap:8px}
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 14px;font-size:13px;font-weight:500;line-height:1.4;
+  border:1px solid var(--border);border-radius:var(--radius);
+  background:var(--card);color:var(--text);cursor:pointer;
+  transition:all var(--transition);
+  white-space:nowrap;
+  font-family:inherit;
+}
+.btn:hover{background:#f8fafc;border-color:#cbd5e1}
+.btn-primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.btn-primary:hover{background:var(--primary-hover);border-color:var(--primary-hover)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-icon{padding:6px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;border-radius:var(--radius);transition:all var(--transition);display:inline-flex;align-items:center;justify-content:center}
+.btn-icon:hover{background:#f1f5f9;color:var(--text)}
+
+/* ===== CALENDAR ===== */
+.calendar-header{
+  display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;
+}
+.calendar-header .month-label{font-size:14px;font-weight:600;color:var(--text)}
+.calendar-header .nav-btns{display:flex;gap:2px}
+.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;text-align:center}
+.calendar-day-header{font-size:11px;font-weight:600;color:var(--text-muted);padding:6px 0;text-transform:uppercase}
+.calendar-day{
+  aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:450;color:var(--text);border-radius:50%;
+  cursor:pointer;transition:all var(--transition);position:relative;
+  width:100%;max-width:36px;margin:0 auto;
+}
+.calendar-day:hover{background:#f1f5f9}
+.calendar-day.today{font-weight:700;color:var(--primary)}
+.calendar-day.today::after{content:"";position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--primary)}
+.calendar-day.selected{background:var(--primary);color:#fff;font-weight:600}
+.calendar-day.selected:hover{background:var(--primary-hover)}
+.calendar-day.selected.today::after{background:#fff}
+.calendar-day.other-month{color:var(--text-muted);opacity:.4;cursor:default}
+.calendar-day.has-records::before{content:"";position:absolute;top:1px;right:calc(50% - 14px);width:5px;height:5px;border-radius:50%;background:var(--primary);opacity:.6}
+.calendar-day.selected.has-records::before{background:#fff;opacity:.8}
+
+/* ===== SECTION CARD ===== */
+.section-card{background:var(--card);border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow-sm);margin-bottom:20px}
+.section-card h3{font-size:14px;font-weight:600;margin-bottom:12px;color:var(--text)}
+.section-card h2{font-size:18px;font-weight:600;margin-bottom:4px}
+.section-card .subtitle{font-size:13px;color:var(--text-secondary);margin-bottom:16px}
+
+/* ===== CATEGORY MANAGER ===== */
+.cat-section{margin-bottom:14px}
+.cat-section h4{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:6px}
+.cat-tags{display:flex;flex-wrap:wrap;gap:6px}
+.cat-tag{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:8px 10px;font-size:12px;background:#f8fafc;
+  border:1px solid var(--border);border-radius:var(--radius);
+  font-family:inherit;
+  color:var(--text);
+}
+.cat-tag .remove-tag{
+  cursor:pointer;color:var(--text-muted);font-size:14px;line-height:1;
+  padding:0 2px;transition:color var(--transition);
+}
+.cat-tag .remove-tag:hover{color:var(--warning)}
+.cat-tag.project-tag{border-left:3px solid var(--primary)}
+.cat-tag.nonproject-tag{border-left:3px solid var(--success)}
+.add-cat-form{display:flex;gap:6px;margin-top:10px}
+.add-cat-form input{
+  flex:1;padding:6px 10px;font-size:12px;border:1px solid var(--border);
+  border-radius:var(--radius);font-family:inherit;outline:none;
+  transition:border-color var(--transition);
+}
+.add-cat-form input:focus{border-color:var(--primary)}
+.add-cat-form select{
+  padding:6px;font-size:12px;border:1px solid var(--border);
+  border-radius:var(--radius);font-family:inherit;background:var(--card);
+  outline:none;cursor:pointer;
+}
+
+/* ===== ENTRIES LIST ===== */
+.entry-item{
+  display:flex;align-items:center;gap:10px;padding:12px 14px;
+  background:#f8fafc;border:1px solid var(--border);
+  border-radius:var(--radius);margin-bottom:8px;
+  transition:all var(--transition);
+}
+.entry-item:hover{border-color:#cbd5e1}
+.entry-category{font-size:13px;font-weight:600;min-width:90px}
+.entry-category.project{color:var(--primary)}
+.entry-category.non-project{color:var(--success)}
+.entry-hours{font-size:14px;font-weight:600;min-width:60px;text-align:right}
+.entry-note{flex:1;font-size:13px;color:var(--text-secondary);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.entry-delete{color:var(--text-muted);cursor:pointer;padding:4px;border-radius:4px;transition:all var(--transition)}
+.entry-delete:hover{color:var(--warning);background:var(--warning-light)}
+
+.empty-state{
+  text-align:center;padding:40px 20px;color:var(--text-muted);
+}
+.empty-state .icon{font-size:40px;margin-bottom:12px}
+.empty-state p{font-size:14px}
+
+/* ===== ADD ENTRY FORM ===== */
+.add-entry-form{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group label{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px}
+.form-group select,.form-group input{
+  padding:8px 12px;font-size:13px;border:1px solid var(--border);
+  border-radius:var(--radius);font-family:inherit;outline:none;
+  transition:border-color var(--transition);background:var(--card);
+}
+.form-group select:focus,.form-group input:focus{border-color:var(--primary)}
+.form-group input[type=number]{width:80px}
+.form-group input[type=text]{width:180px}
+
+/* ===== DAILY SUMMARY ===== */
+.daily-summary{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px;background:var(--primary-light);
+  border-radius:var(--radius);margin-top:16px;
+}
+.daily-summary .total-label{font-size:13px;font-weight:600;color:var(--primary)}
+.daily-summary .total-hours{font-size:20px;font-weight:700;color:var(--primary)}
+.daily-summary .total-limit{font-size:12px;color:var(--text-muted)}
+
+/* ===== OVERTIME WARNING ===== */
+.overtime-warning{
+  margin-top:12px;padding:14px 16px;
+  background:var(--warning-light);border:1px solid var(--warning-border);
+  border-radius:var(--radius);
+}
+.overtime-warning .warn-title{font-size:13px;font-weight:700;color:var(--warning);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.overtime-warning textarea{
+  width:100%;padding:8px 12px;font-size:13px;border:1px solid var(--warning-border);
+  border-radius:var(--radius);font-family:inherit;resize:vertical;
+  min-height:60px;outline:none;
+}
+.overtime-warning textarea:focus{border-color:var(--warning)}
+.justification-saved{font-size:12px;color:var(--success);margin-top:6px}
+
+/* ===== CALENDAR DOT ===== */
+.calendar-section{margin-bottom:16px}
+
+/* ===== REPORT MODAL ===== */
+.modal-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);
+  backdrop-filter:blur(4px);z-index:100;align-items:center;justify-content:center;
+}
+.modal-overlay.active{display:flex}
+.modal{
+  background:var(--card);border-radius:var(--radius-lg);
+  box-shadow:0 20px 60px rgba(0,0,0,.15);
+  width:90%;max-width:780px;max-height:85vh;
+  display:flex;flex-direction:column;
+}
+.modal-header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:20px 24px;border-bottom:1px solid var(--border);
+}
+.modal-header h2{font-size:17px;font-weight:700}
+.modal-body{padding:24px;overflow-y:auto;flex:1}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+
+/* ===== CHART ===== */
+.chart-container{
+  margin-top:28px;padding-top:20px;border-top:1px solid var(--border);
+}
+.chart-container canvas{width:100%;height:auto;display:block}
+
+/* ===== REPORT TABLE ===== */
+.report-table{width:100%;border-collapse:collapse;font-size:13px}
+.report-table th{
+  text-align:left;padding:10px 12px;font-size:11px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.4px;color:var(--text-muted);
+  border-bottom:2px solid var(--border);
+}
+.report-table td{padding:10px 12px;border-bottom:1px solid var(--border)}
+.report-table tr.day-header{background:#f8fafc}
+.report-table tr.day-header td{font-weight:700;color:var(--text);font-size:14px;padding-top:16px}
+.report-table tr.total-row{font-weight:700;border-top:2px solid var(--text)}
+.report-table tr.total-row td{padding-top:14px;font-size:14px}
+.report-table .num{text-align:right;font-variant-numeric:tabular-nums}
+.report-table .category-tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.report-table .category-tag.project{background:var(--primary-light);color:var(--primary)}
+.report-table .category-tag.non-project{background:#f0fdf4;color:var(--success)}
+
+/* ===== TOAST ===== */
+.toast-container{position:fixed;bottom:24px;right:24px;z-index:200;display:flex;flex-direction:column;gap:8px}
+.toast{
+  padding:12px 18px;border-radius:var(--radius);font-size:13px;font-weight:500;
+  box-shadow:var(--shadow-md);animation:slideIn .25s ease;
+  max-width:360px;
+}
+.toast.success{background:#f0fdf4;color:var(--success);border:1px solid #bbf7d0}
+.toast.error{background:var(--warning-light);color:var(--warning);border:1px solid var(--warning-border)}
+.toast.info{background:var(--primary-light);color:var(--primary);border:1px solid #bfdbfe}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(100%);opacity:0}}
+
+/* ===== REPORT BUTTON ===== */
+.report-btn-wrap{margin-top:20px;text-align:center}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:768px){
+  #app{flex-direction:column}
+  .sidebar{width:100%;min-width:auto;height:auto;position:static;padding:16px;border-right:none;border-bottom:1px solid var(--border)}
+  .main{padding:16px}
+  .add-entry-form{flex-direction:column}
+  .add-entry-form .form-group input[type=text]{width:100%}
+  .calendar-day{max-width:40px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="calendar-section">
+      <div class="calendar-header">
+        <span class="month-label" id="monthLabel">2026年5月</span>
+        <div class="nav-btns">
+          <button class="btn-icon" id="prevMonth" title="上个月">◀</button>
+          <button class="btn-icon" id="nextMonth" title="下个月">▶</button>
+        </div>
+      </div>
+      <div class="calendar-grid" id="calendarGrid"></div>
+    </div>
+    <button class="btn btn-sm" id="goToday" style="width:100%;margin-top:-8px">回到今天</button>
+
+    <div class="section-card" style="margin-bottom:0">
+      <h3>类别管理</h3>
+      <div class="cat-section">
+        <h4>项目</h4>
+        <div class="cat-tags" id="projectTags"></div>
+      </div>
+      <div class="cat-section">
+        <h4>非项目活动</h4>
+        <div class="cat-tags" id="nonProjectTags"></div>
+      </div>
+      <div class="add-cat-form">
+        <input type="text" id="newCatName" placeholder="新类别名称..." maxlength="50">
+        <select id="newCatType">
+          <option value="project">项目</option>
+          <option value="non-project">非项目</option>
+        </select>
+        <button class="btn btn-primary btn-sm" id="addCatBtn">添加</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="header">
+      <h1 id="dateHeading">时间记录</h1>
+      <div class="header-actions">
+        <button class="btn btn-sm" id="exportBtn">导出 JSON</button>
+        <button class="btn btn-sm" id="importBtn">导入 JSON</button>
+      </div>
+    </div>
+
+    <!-- Entries card -->
+    <div class="section-card">
+      <h2 id="selectedDateTitle">2026年5月17日 星期日</h2>
+      <p class="subtitle">记录当日工作时间</p>
+
+      <div id="entriesContainer">
+        <div class="empty-state">
+          <div class="icon">📋</div>
+          <p>暂无记录，请在下方添加</p>
+        </div>
+      </div>
+
+      <!-- Add entry form -->
+      <div class="add-entry-form" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+        <div class="form-group">
+          <label>类别</label>
+          <select id="entryCategory"></select>
+        </div>
+        <div class="form-group">
+          <label>小时</label>
+          <input type="number" id="entryHours" min="0.25" max="24" step="0.25" value="1" placeholder="小时">
+        </div>
+        <div class="form-group" style="flex:1">
+          <label>备注（可选）</label>
+          <input type="text" id="entryNote" placeholder="备注..." maxlength="200">
+        </div>
+        <button class="btn btn-primary" id="addEntryBtn">+ 添加记录</button>
+      </div>
+
+      <!-- Daily summary -->
+      <div class="daily-summary" id="dailySummary">
+        <div>
+          <div class="total-label">当日总计</div>
+          <div class="total-limit">标准工时 8 小时/天</div>
+        </div>
+        <div class="total-hours" id="dailyTotal">0.00h</div>
+      </div>
+
+      <!-- Overtime warning -->
+      <div class="overtime-warning" id="overtimeWarning" style="display:none">
+        <div class="warn-title">⚠️ 超时警告</div>
+        <p style="font-size:12px;color:var(--warning);margin-bottom:8px">当日记录超过 8 小时，请填写加班理由：</p>
+        <textarea id="overtimeJustification" placeholder="请输入加班理由..."></textarea>
+        <button class="btn btn-sm" id="saveJustificationBtn" style="margin-top:8px">保存理由</button>
+        <div class="justification-saved" id="justificationSaved" style="display:none">✓ 已保存</div>
+      </div>
+    </div>
+
+    <!-- Monthly report -->
+    <div class="report-btn-wrap">
+      <button class="btn btn-primary" id="reportBtn">📊 生成月度报告</button>
+      <button class="btn" id="exportCsvBtn" style="margin-left:8px">导出 CSV</button>
+    </div>
+  </main>
+</div>
+
+<!-- Report Modal -->
+<div class="modal-overlay" id="reportModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="reportTitle">月度总结报告</h2>
+      <button class="btn-icon" id="closeReport">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="reportBody"></div>
+      <div class="chart-container" id="chartContainer" style="display:none">
+        <h3 style="font-size:14px;font-weight:600;margin-bottom:16px;color:var(--text)">📊 月度统计图</h3>
+        <canvas id="reportChart"></canvas>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" id="closeReportBtn">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Hidden file input for import -->
+<input type="file" id="importFileInput" accept=".json" style="display:none">
+
+<script>
+// ========== DATA LAYER ==========
+const STORAGE_KEY_RECORDS = 'tt_records';
+const STORAGE_KEY_CATEGORIES = 'tt_categories';
+const STANDARD_HOURS = 8;
+
+function loadJSON(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch { return fallback; }
+}
+
+function saveJSON(key, data) {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (e) {
+    showToast('存储空间不足，请导出数据并清理旧记录', 'error');
+  }
+}
+
+function getRecordsData() {
+  return loadJSON(STORAGE_KEY_RECORDS, {});
+}
+
+function saveRecordsData(data) {
+  saveJSON(STORAGE_KEY_RECORDS, data);
+}
+
+function getCategories() {
+  return loadJSON(STORAGE_KEY_CATEGORIES, {
+    project: [],
+    'non-project': ['出差', '休假', '培训', '会议']
+  });
+}
+
+function saveCategories(cats) {
+  saveJSON(STORAGE_KEY_CATEGORIES, cats);
+}
+
+function getDayData(dateStr) {
+  const data = getRecordsData();
+  return data[dateStr] || { entries: [], overtimeJustification: '' };
+}
+
+function setDayData(dateStr, dayData) {
+  const data = getRecordsData();
+  if (!dayData.entries.length && !dayData.overtimeJustification) {
+    delete data[dateStr];
+  } else {
+    data[dateStr] = dayData;
+  }
+  saveRecordsData(data);
+}
+
+function generateId() {
+  return crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+// ========== STATE ==========
+let currentYear, currentMonth; // calendar display
+let selectedDate; // YYYY-MM-DD string
+const today = new Date();
+const todayStr = formatDate(today);
+
+function formatDate(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+// ========== TOAST ==========
+function showToast(msg, type) {
+  type = type || 'info';
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = 'toast ' + type;
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(function() {
+    toast.style.animation = 'slideOut .25s ease forwards';
+    setTimeout(function() { toast.remove(); }, 260);
+  }, 2500);
+}
+
+// ========== CALENDAR ==========
+function renderCalendar() {
+  const grid = document.getElementById('calendarGrid');
+  document.getElementById('monthLabel').textContent = currentYear + '年' + (currentMonth + 1) + '月';
+
+  // Day headers
+  const dayHeaders = ['一', '二', '三', '四', '五', '六', '日'];
+  let html = dayHeaders.map(function(d) { return '<div class="calendar-day-header">' + d + '</div>'; }).join('');
+
+  const firstDay = new Date(currentYear, currentMonth, 1);
+  const lastDay = new Date(currentYear, currentMonth + 1, 0);
+  const daysInMonth = lastDay.getDate();
+
+  // getDay(): 0=Sun, 1=Mon, ..., 6=Sat. We want Mon=0, Sun=6.
+  let startDow = firstDay.getDay() - 1;
+  if (startDow < 0) startDow = 6;
+
+  const prevMonthLastDay = new Date(currentYear, currentMonth, 0).getDate();
+
+  const recordsData = getRecordsData();
+
+  // Previous month fillers
+  for (var i = startDow - 1; i >= 0; i--) {
+    var d = prevMonthLastDay - i;
+    var m = currentMonth === 0 ? 12 : currentMonth;
+    var y = currentMonth === 0 ? currentYear - 1 : currentYear;
+    var ds = y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    html += '<div class="calendar-day other-month" data-date="' + ds + '">' + d + '</div>';
+  }
+
+  // Current month days
+  for (var d = 1; d <= daysInMonth; d++) {
+    var ds = currentYear + '-' + String(currentMonth + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+    var cls = 'calendar-day';
+    if (ds === todayStr) cls += ' today';
+    if (ds === selectedDate) cls += ' selected';
+    if (recordsData[ds] && recordsData[ds].entries && recordsData[ds].entries.length > 0) cls += ' has-records';
+    html += '<div class="' + cls + '" data-date="' + ds + '">' + d + '</div>';
+  }
+
+  // Next month fillers
+  var totalCells = startDow + daysInMonth;
+  var remaining = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+  for (var i = 1; i <= remaining; i++) {
+    var m = currentMonth + 2;
+    var y = currentYear;
+    if (m > 12) { m = 1; y++; }
+    var ds = y + '-' + String(m).padStart(2,'0') + '-' + String(i).padStart(2,'0');
+    html += '<div class="calendar-day other-month" data-date="' + ds + '">' + i + '</div>';
+  }
+
+  grid.innerHTML = html;
+}
+
+function selectDate(dateStr) {
+  selectedDate = dateStr;
+  refreshAll();
+}
+
+// ========== CATEGORIES ==========
+function renderCategories() {
+  var cats = getCategories();
+
+  var projectHtml = '';
+  cats.project.forEach(function(name) {
+    projectHtml += '<span class="cat-tag project-tag">' + escapeHTML(name) +
+      '<span class="remove-tag" data-type="project" data-name="' + escapeAttr(name) + '">×</span></span>';
+  });
+  document.getElementById('projectTags').innerHTML = projectHtml || '<span style="font-size:12px;color:var(--text-muted)">暂无</span>';
+
+  var nonProjHtml = '';
+  cats['non-project'].forEach(function(name) {
+    nonProjHtml += '<span class="cat-tag nonproject-tag">' + escapeHTML(name) +
+      '<span class="remove-tag" data-type="non-project" data-name="' + escapeAttr(name) + '">×</span></span>';
+  });
+  document.getElementById('nonProjectTags').innerHTML = nonProjHtml || '<span style="font-size:12px;color:var(--text-muted)">暂无</span>';
+
+  // Bind remove events
+  document.querySelectorAll('.remove-tag').forEach(function(el) {
+    el.onclick = function(e) {
+      e.stopPropagation();
+      var type = this.dataset.type;
+      var name = this.dataset.name;
+      // Check if category is used in any records
+      var used = false;
+      var records = getRecordsData();
+      for (var dateStr in records) {
+        var dayData = records[dateStr];
+        (dayData.entries || []).forEach(function(entry) {
+          if (entry.category === name && entry.categoryType === type) used = true;
+        });
+      }
+      if (used) {
+        showToast('类别 "' + name + '" 正在被使用，无法删除', 'error');
+        return;
+      }
+      var cats = getCategories();
+      cats[type] = cats[type].filter(function(n) { return n !== name; });
+      saveCategories(cats);
+      renderCategories();
+      renderEntries();
+      showToast('已删除类别 "' + name + '"', 'info');
+    };
+  });
+
+  // Update entry form dropdown
+  updateCategoryDropdown();
+}
+
+function updateCategoryDropdown() {
+  var cats = getCategories();
+  var sel = document.getElementById('entryCategory');
+  var currentVal = sel.value;
+  sel.innerHTML = '';
+  if (cats.project.length > 0) {
+    var optgroup1 = document.createElement('optgroup');
+    optgroup1.label = '项目';
+    cats.project.forEach(function(name) {
+      var opt = document.createElement('option');
+      opt.value = 'project::' + name;
+      opt.textContent = name;
+      optgroup1.appendChild(opt);
+    });
+    sel.appendChild(optgroup1);
+  }
+  if (cats['non-project'].length > 0) {
+    var optgroup2 = document.createElement('optgroup');
+    optgroup2.label = '非项目活动';
+    cats['non-project'].forEach(function(name) {
+      var opt = document.createElement('option');
+      opt.value = 'non-project::' + name;
+      opt.textContent = name;
+      optgroup2.appendChild(opt);
+    });
+    sel.appendChild(optgroup2);
+  }
+  // Restore selection if still exists
+  if (currentVal && sel.querySelector('option[value="' + currentVal + '"]')) {
+    sel.value = currentVal;
+  }
+}
+
+function addCategory() {
+  var nameInput = document.getElementById('newCatName');
+  var typeSelect = document.getElementById('newCatType');
+  var name = nameInput.value.trim();
+  var type = typeSelect.value;
+  if (!name) { showToast('请输入类别名称', 'error'); return; }
+  var cats = getCategories();
+  if (cats[type].indexOf(name) >= 0) {
+    showToast('该类别已存在', 'error');
+    return;
+  }
+  cats[type].push(name);
+  saveCategories(cats);
+  nameInput.value = '';
+  renderCategories();
+  showToast('已添加类别 "' + name + '"', 'success');
+}
+
+// ========== ENTRIES ==========
+function renderEntries() {
+  var container = document.getElementById('entriesContainer');
+  var dayData = getDayData(selectedDate);
+  var entries = dayData.entries || [];
+
+  if (entries.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">📋</div><p>暂无记录，请在下方添加</p></div>';
+  } else {
+    var html = '';
+    entries.forEach(function(entry) {
+      var catClass = entry.categoryType === 'project' ? 'project' : 'non-project';
+      html += '<div class="entry-item">' +
+        '<span class="entry-category ' + catClass + '">' + escapeHTML(entry.category) + '</span>' +
+        '<span class="entry-hours">' + entry.hours.toFixed(2) + 'h</span>' +
+        '<span class="entry-note">' + escapeHTML(entry.note || '—') + '</span>' +
+        '<span class="entry-delete" data-id="' + entry.id + '" title="删除">🗑</span>' +
+        '</div>';
+    });
+    container.innerHTML = html;
+
+    // Bind delete events
+    container.querySelectorAll('.entry-delete').forEach(function(el) {
+      el.onclick = function() {
+        deleteEntry(this.dataset.id);
+      };
+    });
+  }
+
+  updateDailySummary();
+}
+
+function addEntry() {
+  var catSel = document.getElementById('entryCategory');
+  var catVal = catSel.value;
+  if (!catVal) { showToast('请先添加类别', 'error'); return; }
+
+  var parts = catVal.split('::');
+  var categoryType = parts[0];
+  var categoryName = parts.slice(1).join('::');
+
+  var hoursInput = document.getElementById('entryHours');
+  var hours = parseFloat(hoursInput.value);
+  if (isNaN(hours) || hours <= 0 || hours > 24) {
+    showToast('请输入有效的小时数 (0.25-24)', 'error');
+    return;
+  }
+
+  var note = document.getElementById('entryNote').value.trim();
+
+  var dayData = getDayData(selectedDate);
+  dayData.entries = dayData.entries || [];
+  dayData.entries.push({
+    id: generateId(),
+    category: categoryName,
+    categoryType: categoryType,
+    hours: Math.round(hours * 100) / 100,
+    note: note
+  });
+
+  setDayData(selectedDate, dayData);
+  document.getElementById('entryNote').value = '';
+  document.getElementById('entryHours').value = '1';
+  renderCalendar();
+  renderEntries();
+  showToast('已添加记录: ' + hours.toFixed(2) + 'h → ' + categoryName, 'success');
+}
+
+function deleteEntry(id) {
+  if (!confirm('确定要删除这条记录吗？')) return;
+  var dayData = getDayData(selectedDate);
+  dayData.entries = (dayData.entries || []).filter(function(e) { return e.id !== id; });
+  setDayData(selectedDate, dayData);
+  renderCalendar();
+  renderEntries();
+  showToast('已删除记录', 'info');
+}
+
+function getDailyTotal(dateStr) {
+  var dayData = getDayData(dateStr);
+  var entries = dayData.entries || [];
+  return entries.reduce(function(sum, e) { return sum + e.hours; }, 0);
+}
+
+function updateDailySummary() {
+  var total = getDailyTotal(selectedDate);
+  document.getElementById('dailyTotal').textContent = total.toFixed(2) + 'h';
+
+  var warningEl = document.getElementById('overtimeWarning');
+  var justificationTextarea = document.getElementById('overtimeJustification');
+  var savedMsg = document.getElementById('justificationSaved');
+
+  if (total > STANDARD_HOURS) {
+    warningEl.style.display = 'block';
+    var dayData = getDayData(selectedDate);
+    justificationTextarea.value = dayData.overtimeJustification || '';
+    if (dayData.overtimeJustification) {
+      savedMsg.style.display = 'block';
+    } else {
+      savedMsg.style.display = 'none';
+    }
+  } else {
+    warningEl.style.display = 'none';
+  }
+}
+
+function saveJustification() {
+  var text = document.getElementById('overtimeJustification').value.trim();
+  if (!text) {
+    showToast('请填写加班理由', 'error');
+    return;
+  }
+  var dayData = getDayData(selectedDate);
+  dayData.overtimeJustification = text;
+  setDayData(selectedDate, dayData);
+  document.getElementById('justificationSaved').style.display = 'block';
+  showToast('加班理由已保存', 'success');
+}
+
+// ========== CHART ==========
+function drawChart(catTotals) {
+  var container = document.getElementById('chartContainer');
+  var canvas = document.getElementById('reportChart');
+  if (!canvas) return;
+
+  // Convert to array and sort by hours descending
+  var items = [];
+  for (var key in catTotals) {
+    var keyParts = key.split('::');
+    items.push({
+      type: keyParts[0],
+      name: keyParts.slice(1).join('::'),
+      hours: catTotals[key]
+    });
+  }
+  items.sort(function(a, b) { return b.hours - a.hours; });
+  if (items.length === 0) { container.style.display = 'none'; return; }
+
+  container.style.display = 'block';
+
+  // Use requestAnimationFrame to ensure canvas is visible and sized
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+    var rect = canvas.parentElement.getBoundingClientRect();
+    var width = rect.width;
+    var dpr = window.devicePixelRatio || 1;
+
+    var barH = 36;
+    var gap = 10;
+    var topPad = 10;
+    var bottomPad = 20;
+    var leftPad = 130;
+    var rightPad = 20;
+    var chartW = width - leftPad - rightPad;
+    var totalH = items.length * (barH + gap) + topPad + bottomPad;
+
+    canvas.style.width = width + 'px';
+    canvas.style.height = totalH + 'px';
+    canvas.width = width * dpr;
+    canvas.height = totalH * dpr;
+    var ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    // Background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, totalH);
+
+    var maxHours = items[0].hours || 1;
+
+    // Grid lines
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    for (var g = 0; g <= 4; g++) {
+      var gx = leftPad + (chartW * g / 4);
+      ctx.beginPath();
+      ctx.moveTo(gx, topPad);
+      ctx.lineTo(gx, totalH - bottomPad);
+      ctx.stroke();
+    }
+
+    items.forEach(function(item, i) {
+      var y = topPad + i * (barH + gap);
+      var barW = Math.max((item.hours / maxHours) * chartW, 3);
+      var color = item.type === 'project' ? '#2563eb' : '#16a34a';
+      var lightColor = item.type === 'project' ? '#eff6ff' : '#f0fdf4';
+
+      // Category name label
+      ctx.fillStyle = '#1e293b';
+      ctx.font = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      // Truncate long names
+      var displayName = item.name;
+      if (ctx.measureText(displayName).width > leftPad - 20) {
+        while (ctx.measureText(displayName + '…').width > leftPad - 20 && displayName.length > 1) {
+          displayName = displayName.slice(0, -1);
+        }
+        displayName += '…';
+      }
+      ctx.fillText(displayName, leftPad - 10, y + barH / 2);
+
+      // Bar background (full width)
+      ctx.fillStyle = lightColor;
+      ctx.beginPath();
+      roundedRect(ctx, leftPad, y, chartW, barH, 6);
+      ctx.fill();
+
+      // Bar foreground
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      roundedRect(ctx, leftPad, y, Math.max(barW, 3), barH, 6);
+      ctx.fill();
+
+      // Value text inside/outside bar
+      var days = item.hours / STANDARD_HOURS;
+      var valueText = item.hours.toFixed(2) + 'h  (' + days.toFixed(2) + 'd)';
+      ctx.font = '600 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      if (barW > ctx.measureText(valueText).width + 20) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(valueText, leftPad + 12, y + barH / 2);
+      } else {
+        ctx.fillStyle = '#334155';
+        ctx.fillText(valueText, leftPad + barW + 10, y + barH / 2);
+      }
+    });
+
+    // X-axis labels
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    for (var g = 0; g <= 4; g++) {
+      var gx = leftPad + (chartW * g / 4);
+      var labelH = (maxHours * g / 4);
+      ctx.fillText(labelH.toFixed(1) + 'h', gx, totalH - bottomPad + 4);
+    }
+  });
+  }); // double rAF for layout
+}
+
+function roundedRect(ctx, x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
+}
+
+// ========== MONTHLY REPORT ==========
+function generateReport() {
+  var year = currentYear;
+  var month = currentMonth;
+  var records = getRecordsData();
+
+  // Collect all dates in this month that have records
+  var dates = [];
+  for (var dateStr in records) {
+    var parts = dateStr.split('-');
+    if (parseInt(parts[0]) === year && parseInt(parts[1]) === month + 1) {
+      var dayData = records[dateStr];
+      if (dayData.entries && dayData.entries.length > 0) {
+        dates.push(dateStr);
+      }
+    }
+  }
+  dates.sort();
+
+  if (dates.length === 0) {
+    document.getElementById('reportBody').innerHTML = '<div class="empty-state"><p>该月暂无记录</p></div>';
+    document.getElementById('chartContainer').style.display = 'none';
+    document.getElementById('reportTitle').textContent = year + '年' + (month + 1) + '月 总结报告';
+    document.getElementById('reportModal').classList.add('active');
+    return;
+  }
+
+  var totalHours = 0;
+  var catTotals = {}; // key: "type::name"
+
+  var html = '<table class="report-table"><thead><tr>' +
+    '<th>日期</th><th>类别</th><th>类型</th><th class="num">小时</th><th class="num">天 (÷8)</th><th>备注</th>' +
+    '</tr></thead><tbody>';
+
+  dates.forEach(function(dateStr) {
+    var dayData = records[dateStr];
+    var entries = dayData.entries || [];
+    var isFirst = true;
+
+    entries.forEach(function(entry) {
+      var days = entry.hours / STANDARD_HOURS;
+      totalHours += entry.hours;
+      var key = entry.categoryType + '::' + entry.category;
+      catTotals[key] = (catTotals[key] || 0) + entry.hours;
+
+      var typeLabel = entry.categoryType === 'project' ? '项目' : '非项目';
+      var catClass = entry.categoryType === 'project' ? 'project' : 'non-project';
+
+      html += '<tr' + (isFirst ? ' class="day-header"' : '') + '>' +
+        '<td>' + (isFirst ? formatDateDisplay(dateStr) : '') + '</td>' +
+        '<td><span class="category-tag ' + catClass + '">' + escapeHTML(entry.category) + '</span></td>' +
+        '<td style="font-size:12px;color:var(--text-secondary)">' + typeLabel + '</td>' +
+        '<td class="num">' + entry.hours.toFixed(2) + 'h</td>' +
+        '<td class="num" style="font-weight:600">' + days.toFixed(2) + 'd</td>' +
+        '<td style="font-size:12px;color:var(--text-muted)">' + escapeHTML(entry.note || '') + '</td>' +
+        '</tr>';
+      isFirst = false;
+    });
+
+    // Overtime justification row
+    if (dayData.overtimeJustification) {
+      html += '<tr><td></td><td colspan="5" style="font-size:11px;color:var(--warning);padding-top:0">' +
+        '⚠ 加班理由: ' + escapeHTML(dayData.overtimeJustification) + '</td></tr>';
+    }
+  });
+
+  // Totals row
+  var totalDays = totalHours / STANDARD_HOURS;
+  html += '<tr class="total-row"><td colspan="3">合计</td>' +
+    '<td class="num">' + totalHours.toFixed(2) + 'h</td>' +
+    '<td class="num">' + totalDays.toFixed(2) + 'd</td>' +
+    '<td></td></tr>';
+
+  // Category breakdown
+  html += '<tr><td colspan="6" style="padding-top:20px;font-weight:700;font-size:13px">按类别汇总</td></tr>';
+  for (var key in catTotals) {
+    var parts = key.split('::');
+    var type = parts[0];
+    var name = parts.slice(1).join('::');
+    var hrs = catTotals[key];
+    var dys = hrs / STANDARD_HOURS;
+    var catClass = type === 'project' ? 'project' : 'non-project';
+    html += '<tr>' +
+      '<td colspan="2"><span class="category-tag ' + catClass + '">' + escapeHTML(name) + '</span></td>' +
+      '<td style="font-size:12px;color:var(--text-secondary)">' + (type === 'project' ? '项目' : '非项目') + '</td>' +
+      '<td class="num">' + hrs.toFixed(2) + 'h</td>' +
+      '<td class="num" style="font-weight:600">' + dys.toFixed(2) + 'd</td>' +
+      '<td></td></tr>';
+  }
+
+  html += '</tbody></table>';
+
+  document.getElementById('reportTitle').textContent = year + '年' + (month + 1) + '月 总结报告';
+  document.getElementById('reportBody').innerHTML = html;
+  drawChart(catTotals);
+  document.getElementById('reportModal').classList.add('active');
+}
+
+function formatDateDisplay(dateStr) {
+  var parts = dateStr.split('-');
+  return parseInt(parts[1]) + '月' + parseInt(parts[2]) + '日';
+}
+
+// ========== CSV EXPORT ==========
+function exportCSV() {
+  var records = getRecordsData();
+  var rows = [['日期', '类别', '类型', '小时', '天(÷8)', '备注', '加班理由']];
+
+  var dates = Object.keys(records).sort();
+  dates.forEach(function(dateStr) {
+    var dayData = records[dateStr];
+    var entries = dayData.entries || [];
+    entries.forEach(function(entry) {
+      var days = entry.hours / STANDARD_HOURS;
+      rows.push([
+        dateStr,
+        entry.category,
+        entry.categoryType === 'project' ? '项目' : '非项目',
+        entry.hours.toFixed(2),
+        days.toFixed(2),
+        entry.note || '',
+        dayData.overtimeJustification || ''
+      ]);
+    });
+  });
+
+  // BOM for Excel
+  var csvContent = '﻿';
+  rows.forEach(function(row) {
+    csvContent += row.map(function(cell) { return '"' + String(cell).replace(/"/g, '""') + '"'; }).join(',') + '\n';
+  });
+
+  downloadFile('time_report_' + currentYear + '_' + (currentMonth + 1) + '.csv', csvContent, 'text/csv;charset=utf-8');
+  showToast('CSV 报告已导出', 'success');
+}
+
+// ========== JSON IMPORT/EXPORT ==========
+function exportJSON() {
+  var data = {
+    categories: getCategories(),
+    records: getRecordsData(),
+    exportedAt: new Date().toISOString()
+  };
+  var json = JSON.stringify(data, null, 2);
+  downloadFile('time_tracker_backup.json', json, 'application/json');
+  showToast('数据已导出为 JSON', 'success');
+}
+
+function importJSON(file) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = JSON.parse(e.target.result);
+      if (!data.records || typeof data.records !== 'object') {
+        throw new Error('无效的数据格式');
+      }
+      // Validate records structure
+      for (var dateStr in data.records) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+          throw new Error('无效的日期格式: ' + dateStr);
+        }
+        var dayData = data.records[dateStr];
+        if (!dayData.entries || !Array.isArray(dayData.entries)) {
+          throw new Error('无效的数据结构: ' + dateStr);
+        }
+      }
+
+      // Ask merge or replace
+      var existingRecords = getRecordsData();
+      var existingCount = Object.keys(existingRecords).length;
+      var importCount = Object.keys(data.records).length;
+      var action = confirm(
+        '发现 ' + importCount + ' 天的记录。\n' +
+        '当前已有 ' + existingCount + ' 天的记录。\n\n' +
+        '点击「确定」合并数据（导入数据覆盖同名日期）\n' +
+        '点击「取消」放弃导入'
+      );
+      if (!action) return;
+
+      // Merge
+      var merged = {};
+      // Copy existing
+      for (var k in existingRecords) { merged[k] = existingRecords[k]; }
+      // Overwrite with imported
+      for (var k in data.records) { merged[k] = data.records[k]; }
+
+      saveRecordsData(merged);
+
+      if (data.categories) {
+        // Merge categories
+        var existingCats = getCategories();
+        var importCats = data.categories;
+        for (var type in importCats) {
+          if (!existingCats[type]) existingCats[type] = [];
+          importCats[type].forEach(function(name) {
+            if (existingCats[type].indexOf(name) < 0) {
+              existingCats[type].push(name);
+            }
+          });
+        }
+        saveCategories(existingCats);
+        renderCategories();
+      }
+
+      renderCalendar();
+      renderEntries();
+      showToast('成功导入 ' + importCount + ' 天的记录', 'success');
+    } catch (err) {
+      showToast('导入失败: ' + err.message, 'error');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function downloadFile(filename, content, mimeType) {
+  var blob = new Blob([content], { type: mimeType });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ========== HELPERS ==========
+function escapeHTML(str) {
+  var div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function escapeAttr(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function refreshAll() {
+  // Update date heading
+  var parts = selectedDate.split('-');
+  var dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  var weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+  document.getElementById('selectedDateTitle').textContent =
+    parseInt(parts[0]) + '年' + parseInt(parts[1]) + '月' + parseInt(parts[2]) + '日 ' + weekdays[dateObj.getDay()];
+
+  renderCalendar();
+  renderEntries();
+}
+
+// ========== EVENT BINDINGS ==========
+document.getElementById('prevMonth').onclick = function() {
+  currentMonth--;
+  if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+  // Don't auto-change selected date — user might be looking at another month
+  renderCalendar();
+};
+
+document.getElementById('nextMonth').onclick = function() {
+  currentMonth++;
+  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+  renderCalendar();
+};
+
+document.getElementById('goToday').onclick = function() {
+  currentYear = today.getFullYear();
+  currentMonth = today.getMonth();
+  selectDate(todayStr);
+};
+
+document.getElementById('calendarGrid').onclick = function(e) {
+  var dayEl = e.target.closest('.calendar-day');
+  if (!dayEl) return;
+  var dateStr = dayEl.dataset.date;
+  if (!dateStr) return;
+  // Update calendar view to match selected date's month
+  var parts = dateStr.split('-');
+  currentYear = parseInt(parts[0]);
+  currentMonth = parseInt(parts[1]) - 1;
+  selectDate(dateStr);
+};
+
+document.getElementById('addEntryBtn').onclick = addEntry;
+
+document.getElementById('saveJustificationBtn').onclick = saveJustification;
+
+// Enter key in justification saves it
+document.getElementById('overtimeJustification').onkeydown = function(e) {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    saveJustification();
+  }
+};
+
+document.getElementById('addCatBtn').onclick = addCategory;
+document.getElementById('newCatName').onkeydown = function(e) {
+  if (e.key === 'Enter') addCategory();
+};
+
+document.getElementById('reportBtn').onclick = generateReport;
+
+document.getElementById('closeReport').onclick = function() {
+  document.getElementById('reportModal').classList.remove('active');
+};
+document.getElementById('closeReportBtn').onclick = function() {
+  document.getElementById('reportModal').classList.remove('active');
+};
+document.getElementById('reportModal').onclick = function(e) {
+  if (e.target === this) document.getElementById('reportModal').classList.remove('active');
+};
+
+document.getElementById('exportBtn').onclick = exportJSON;
+document.getElementById('exportCsvBtn').onclick = exportCSV;
+document.getElementById('importBtn').onclick = function() {
+  document.getElementById('importFileInput').click();
+};
+document.getElementById('importFileInput').onchange = function() {
+  if (this.files && this.files[0]) {
+    importJSON(this.files[0]);
+    this.value = '';
+  }
+};
+
+// Keyboard shortcuts
+document.onkeydown = function(e) {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  // Escape to close modal
+  if (e.key === 'Escape') {
+    document.getElementById('reportModal').classList.remove('active');
+  }
+};
+
+// ========== INIT ==========
+function init() {
+  currentYear = today.getFullYear();
+  currentMonth = today.getMonth();
+  selectedDate = todayStr;
+
+  renderCategories();
+  refreshAll();
+}
+
+init();
+</script>
+</body>
+</html>
